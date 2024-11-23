@@ -33,6 +33,8 @@ type cryptPrivateKey struct {
 	privateKey     *rsa.PrivateKey
 }
 
+type cryptPrivateKeys []cryptPrivateKey
+
 func NewPrivateKey(privateKeyPath string) (*cryptPrivateKey, error) {
 	if privateKeyPath == "" {
 		return nil, fmt.Errorf("cannot get private key without a specified path")
@@ -69,17 +71,23 @@ func (pk *cryptPrivateKey) writePrivateKey() error {
 	return nil
 }
 
+// getPrivateKey returns the rsa.PrivateKey from the provided cryptPrivateKey. If it is not set yet, it will
+// try to load it from the specified filePath. It also checks whether it is a valid PrivateKey.
 func (pk cryptPrivateKey) getPrivateKey() (*rsa.PrivateKey, error) {
+	// if privateKey is already loaded, return it from the pk
 	if pk.privateKey != nil {
 		return pk.privateKey, nil
 	}
+	// if it is not loaded on the pk, we must load it, in this case from a specific path which hopefully is set
 	if pk.privateKeyPath == "" {
 		return nil, fmt.Errorf("cannot get private key without a specified path")
 	}
+	// if set, read file from set path and try to decode
 	if privateKeyPEM, err := os.ReadFile(pk.privateKeyPath); err != nil {
 		panic(err)
 	} else if privateKeyBlock, _ := pem.Decode(privateKeyPEM); privateKeyBlock == nil {
 		return nil, fmt.Errorf("cannot decode private key")
+		// sanity check if the privatekey is a valid one
 	} else if privateRsaKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes); err != nil {
 		return nil, fmt.Errorf("private key invalid: %w", err)
 	} else {
@@ -87,8 +95,6 @@ func (pk cryptPrivateKey) getPrivateKey() (*rsa.PrivateKey, error) {
 	}
 	return pk.privateKey, nil
 }
-
-type cryptPrivateKeys []cryptPrivateKey
 
 func NewCrypt(privateKeyPaths []string, publicKeyPath string, encryptionContext string) (*Crypt, error) {
 	var privateKeys cryptPrivateKeys

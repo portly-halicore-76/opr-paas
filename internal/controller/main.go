@@ -31,7 +31,8 @@ type PaasConfigStore struct {
 
 var (
 	_cnf            = &PaasConfigStore{}
-	_crypt          map[string]*crypt.Crypt
+	// _crypts contains a maps of crypt against a Paas name
+	_crypts         map[string]*crypt.Crypt
 	debugComponents []string
 )
 
@@ -49,18 +50,25 @@ func SetConfig(newConfig v1alpha1.PaasConfig) {
 	_cnf.currentConfig = newConfig.Spec
 }
 
-func getRsa(paas string) *crypt.Crypt {
-	config := GetConfig()
-	if _crypt == nil {
-		_crypt = make(map[string]*crypt.Crypt)
+// getRsa returns a crypt.Crypt for a specified paasName
+func getRsa(paasName string) *crypt.Crypt {
+	if _crypts == nil {
+		_crypts = make(map[string]*crypt.Crypt)
 	}
-	if c, exists := _crypt[paas]; exists {
+	// TODO(portly-halicore-76) overcome the caching issue in order to reload config properly
+	// This implicit caches the DecryptKeys following the current config. When the config changes
+	// after the crypt for Paas x has been initialized, the keys are not updatet. Which blocks
+	// config reload without Operator restart.
+	if c, exists := _crypts[paasName]; exists {
 		return c
-	} else if c, err := crypt.NewCrypt(config.DecryptKeyPaths, "", paas); err != nil {
-		panic(fmt.Errorf("could not get a crypt: %w", err))
 	} else {
-		_crypt[paas] = c
-		return c
+		currentConfig := GetConfig()
+		if c, err := crypt.NewCrypt(currentConfig.DecryptKeyPaths, "", paasName); err != nil {
+			panic(fmt.Errorf("could not get a crypt: %w", err))
+		} else {
+			_crypts[paasName] = c
+			return c
+		}
 	}
 }
 
