@@ -63,7 +63,7 @@ func getRsa(paasName string) *crypt.Crypt {
 		return c
 	} else {
 		currentConfig := GetConfig()
-		if c, err := crypt.NewCrypt(currentConfig.DecryptKeyPaths, "", paasName); err != nil {
+		if c, err := crypt.NewCryptFromFiles(currentConfig.DecryptKeyPaths, "", paasName); err != nil {
 			panic(fmt.Errorf("could not get a crypt: %w", err))
 		} else {
 			_crypts[paasName] = c

@@ -35,7 +35,8 @@ type cryptPrivateKey struct {
 
 type cryptPrivateKeys []cryptPrivateKey
 
-func NewPrivateKey(privateKeyPath string) (*cryptPrivateKey, error) {
+// NewPrivateKeyFromFile returns a cryptPrivateKey from a privateKeyFilePath
+func NewPrivateKeyFromFile(privateKeyPath string) (*cryptPrivateKey, error) {
 	if privateKeyPath == "" {
 		return nil, fmt.Errorf("cannot get private key without a specified path")
 	}
@@ -74,7 +75,7 @@ func (pk *cryptPrivateKey) writePrivateKey() error {
 // getPrivateKey returns the rsa.PrivateKey from the provided cryptPrivateKey. If it is not set yet, it will
 // try to load it from the specified filePath. It also checks whether it is a valid PrivateKey.
 func (pk cryptPrivateKey) getPrivateKey() (*rsa.PrivateKey, error) {
-	// if privateKey is already loaded, return it from the pk
+	// if privateKey is already loaded, return it from the cryptPrivateKey
 	if pk.privateKey != nil {
 		return pk.privateKey, nil
 	}
@@ -96,14 +97,15 @@ func (pk cryptPrivateKey) getPrivateKey() (*rsa.PrivateKey, error) {
 	return pk.privateKey, nil
 }
 
-func NewCrypt(privateKeyPaths []string, publicKeyPath string, encryptionContext string) (*Crypt, error) {
+// NewCryptFromFiles returns a Crypt based on the provided privateKeyPaths and publicKeyPath using the encryptionContext
+func NewCryptFromFiles(privateKeyPaths []string, publicKeyPath string, encryptionContext string) (*Crypt, error) {
 	var privateKeys cryptPrivateKeys
 
 	if files, err := utils.PathToFileList(privateKeyPaths); err != nil {
 		return nil, fmt.Errorf("could not find files in '%v': %w", privateKeyPaths, err)
 	} else {
 		for _, file := range files {
-			if pk, err := NewPrivateKey(file); err != nil {
+			if pk, err := NewPrivateKeyFromFile(file); err != nil {
 				return nil, fmt.Errorf("invalid private key file %s", file)
 			} else {
 				privateKeys = append(privateKeys, *pk)
