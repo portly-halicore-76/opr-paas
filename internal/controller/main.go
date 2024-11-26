@@ -8,6 +8,7 @@ package controller
 
 import (
 	"context"
+	"crypto/rsa"
 	"fmt"
 	"sync"
 
@@ -32,7 +33,9 @@ type PaasConfigStore struct {
 var (
 	_cnf            = &PaasConfigStore{}
 	// _crypts contains a maps of crypt against a Paas name
-	_crypts         map[string]*crypt.Crypt
+	_crypts map[string]*crypt.Crypt
+	// _privateKeys contains the privateKeys which are loaded from the configured secret
+	_privateKeys    []rsa.PrivateKey
 	debugComponents []string
 )
 
@@ -48,6 +51,11 @@ func SetConfig(newConfig v1alpha1.PaasConfig) {
 	_cnf.mutex.Lock()
 	defer _cnf.mutex.Unlock()
 	_cnf.currentConfig = newConfig.Spec
+}
+
+// resetCrypts removes all cached crypts
+func resetCrypts() {
+	_crypts = nil
 }
 
 // getRsa returns a crypt.Crypt for a specified paasName

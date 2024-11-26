@@ -54,6 +54,20 @@ func NewPrivateKeyFromFile(privateKeyPath string) (*cryptPrivateKey, error) {
 		}, nil
 	}
 }
+// NewPrivateKeyFromRsa returns a cryptPrivateKey from a privateKeyFilePath
+func NewPrivateKeyFromRsa(privateKey rsa.PrivateKey) (*cryptPrivateKey, error) {
+	if privateKeyBlock, _ := pem.Decode(privateKey); privateKeyBlock == nil {
+		return nil, fmt.Errorf("cannot decode private key")
+	} else if privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes); err != nil {
+		return nil, fmt.Errorf("private key invalid: %w", err)
+	} else {
+		return &cryptPrivateKey{
+			privateKeyPath,
+			privateKeyPem,
+			privateKey,
+		}, nil
+	}
+}
 
 func (pk *cryptPrivateKey) writePrivateKey() error {
 	if pk.privateKeyPath == "" {
@@ -109,6 +123,33 @@ func NewCryptFromFiles(privateKeyPaths []string, publicKeyPath string, encryptio
 				return nil, fmt.Errorf("invalid private key file %s", file)
 			} else {
 				privateKeys = append(privateKeys, *pk)
+			}
+		}
+	}
+
+	if publicKeyPath != "" {
+		publicKeyPaths := []string{publicKeyPath}
+		if _, err := utils.PathToFileList(publicKeyPaths); err != nil {
+			return nil, fmt.Errorf("could not find files in '%v': %w", publicKeyPaths, err)
+		}
+	}
+
+	return &Crypt{
+		privateKeys:       privateKeys,
+		publicKeyPath:     publicKeyPath,
+		encryptionContext: []byte(encryptionContext),
+	}, nil
+}
+
+// NewCryptFromKeys returns a Crypt based on the provided privateKeys and publicKey using the encryptionContext
+func NewCryptFromKeys(privateKeys []rsa.PrivateKey, publicKeyPath string, encryptionContext string) (*Crypt, error) {
+	var cryptPrivateKeys cryptPrivateKeys
+
+		for _, key := range privateKeys {
+			if pk, err := NewPrivateKeyFromFile(file); err != nil {
+				return nil, fmt.Errorf("invalid private key file %s", file)
+			} else {
+				cryptPrivateKeys = append(cryptPrivateKeys, *pk)
 			}
 		}
 	}
