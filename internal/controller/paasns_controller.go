@@ -232,11 +232,6 @@ func (r *PaasNSReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 				return ctrl.Result{}, errors.Join(err, r.setErrorCondition(ctx, paasns, err))
 			}
 		}
-
-		logger.Info().Msg("extending Applicationsets for Paas object")
-		if err := r.EnsureAppSetCap(ctx, paasns, paas); err != nil {
-			return ctrl.Result{}, errors.Join(err, r.setErrorCondition(ctx, paasns, err))
-		}
 	}
 
 	// Reconciling succeeded, set appropriate Condition

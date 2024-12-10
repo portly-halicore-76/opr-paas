@@ -203,6 +203,8 @@ func (r *PaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		return ctrl.Result{}, errors.Join(err, r.setErrorCondition(ctx, paas, err))
 	} else if err = r.ReconcileRolebindings(ctx, paas); err != nil {
 		return ctrl.Result{}, errors.Join(err, r.setErrorCondition(ctx, paas, err))
+	} else if err = r.EnsureAppSetCap(ctx, paas); err != nil {
+		return ctrl.Result{}, errors.Join(err, r.setErrorCondition(ctx, paas, err))
 	}
 
 	// Reconciling succeeded, set appropriate Condition

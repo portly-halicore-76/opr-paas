@@ -133,7 +133,7 @@ func entryFromPaas(paas *v1alpha1.Paas) Elements {
 }
 
 // ensureAppSetCap ensures a list entry in the AppSet voor the capability
-func (r *PaasNSReconciler) EnsureAppSetCap(
+func (r *PaasReconciler) EnsureAppSetCap(
 	ctx context.Context,
 	paasns *v1alpha1.PaasNS,
 	paas *v1alpha1.Paas,
@@ -193,7 +193,7 @@ func (r *PaasNSReconciler) EnsureAppSetCap(
 }
 
 // ensureAppSetCap ensures a list entry in the AppSet voor the capability
-func (r *PaasNSReconciler) EnsureAppSetCaps(
+func (r *PaasReconciler) EnsureAppSetCaps(
 	ctx context.Context,
 	paasns *v1alpha1.PaasNS,
 	paas *v1alpha1.Paas,
@@ -206,7 +206,7 @@ func (r *PaasNSReconciler) EnsureAppSetCaps(
 	return nil
 }
 
-func (r *PaasNSReconciler) finalizeAppSetCap(
+func (r *PaasReconciler) finalizeAppSetCap(
 	ctx context.Context,
 	paasns *v1alpha1.PaasNS,
 ) error {
