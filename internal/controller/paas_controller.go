@@ -23,8 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -241,8 +244,59 @@ func (r *PaasReconciler) setErrorCondition(ctx context.Context, paas *v1alpha1.P
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	activePaasConfigUpdated := predicate.Funcs{
+		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*v1alpha1.PaasConfig)
+			newObj := e.ObjectNew.(*v1alpha1.PaasConfig)
+
+			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
+			return !reflect.DeepEqual(oldObj.Spec, newObj.Spec) &&
+				meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, v1alpha1.TypeActivePaasConfig, metav1.ConditionTrue)
+		},
+
+		// Allow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+
+		// Allow delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+
+		// Allow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return true
+		},
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Paas{}).
+		Watches(
+			&v1alpha1.PaasConfig{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+				// Enqueue all Paas objects
+				var reqs []reconcile.Request
+				var paasList v1alpha1.PaasList
+				if err := mgr.GetClient().List(context.Background(), &paasList); err == nil {
+					for _, p := range paasList.Items {
+						reqs = append(reqs, reconcile.Request{
+							NamespacedName: types.NamespacedName{
+								Namespace: p.Namespace,
+								Name:      p.Name,
+							},
+						})
+					}
+				} else {
+					mgr.GetLogger().Error(err, "unable to list paases")
+					return nil
+				}
+
+				return reqs
+			}),
+			builder.WithPredicates(activePaasConfigUpdated),
+		).
 		WithEventFilter(
 			predicate.Or(
 				// Spec updated
