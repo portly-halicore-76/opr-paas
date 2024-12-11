@@ -11,11 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"strings"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	"github.com/belastingdienst/opr-paas/api/v1alpha1"
 
@@ -278,37 +278,14 @@ func (r *PaasNSReconciler) setErrorCondition(ctx context.Context, paasNs *v1alph
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PaasNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// TODO determine whether this applies to all watched resources, including the paasnses itself?
-	// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
-	activePaasConfigUpdated := predicate.Funcs{
-		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldObj := e.ObjectOld.(*v1alpha1.PaasConfig)
-			newObj := e.ObjectNew.(*v1alpha1.PaasConfig)
-
-			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
-			return !reflect.DeepEqual(oldObj.Spec, newObj.Spec) &&
-				meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, v1alpha1.TypeActivePaasConfig, metav1.ConditionTrue)
-		},
-
-		// Allow create events
-		CreateFunc: func(e event.CreateEvent) bool {
-			return true
-		},
-
-		// Allow delete events
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return true
-		},
-
-		// Allow generic events (e.g., external triggers)
-		GenericFunc: func(e event.GenericEvent) bool {
-			return true
-		},
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.PaasNS{}).
+		For(&v1alpha1.PaasNS{}, builder.WithPredicates(
+			predicate.Or(
+				// Spec updated
+				predicate.GenerationChangedPredicate{},
+				// Labels updated
+				predicate.LabelChangedPredicate{},
+			))).
 		Watches(&v1alpha1.PaasConfig{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, gofer client.Object) []ctrl.Request {
 				paasnses := &v1alpha1.PaasNSList{}
@@ -327,15 +304,8 @@ func (r *PaasNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					})
 				}
 				return reqs
-			}), builder.WithPredicates(activePaasConfigUpdated)).
+			}), builder.WithPredicates(v1alpha1.ActivePaasConfigUpdated())).
 		// TODO determine whether the following is replaced by builder.WithPredicates?
-		WithEventFilter(
-			predicate.Or(
-				// Spec updated
-				predicate.GenerationChangedPredicate{},
-				// Labels updated
-				predicate.LabelChangedPredicate{},
-			)).
 		Complete(r)
 }
 

@@ -8,10 +8,14 @@ package v1alpha1
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -286,4 +290,36 @@ type PaasConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&PaasConfig{}, &PaasConfigList{})
+}
+
+func ActivePaasConfigUpdated() predicate.Predicate {
+	return predicate.Funcs{
+		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*PaasConfig)
+			newObj := e.ObjectNew.(*PaasConfig)
+
+			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
+			if meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, TypeActivePaasConfig, metav1.ConditionTrue) {
+				return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
+			}
+
+			return false
+		},
+
+		// Disallow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+
+		// Disallow delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		// Disallow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
 }

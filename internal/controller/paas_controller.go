@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -244,35 +243,14 @@ func (r *PaasReconciler) setErrorCondition(ctx context.Context, paas *v1alpha1.P
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	activePaasConfigUpdated := predicate.Funcs{
-		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldObj := e.ObjectOld.(*v1alpha1.PaasConfig)
-			newObj := e.ObjectNew.(*v1alpha1.PaasConfig)
-
-			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
-			return !reflect.DeepEqual(oldObj.Spec, newObj.Spec) &&
-				meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, v1alpha1.TypeActivePaasConfig, metav1.ConditionTrue)
-		},
-
-		// Allow create events
-		CreateFunc: func(e event.CreateEvent) bool {
-			return true
-		},
-
-		// Allow delete events
-		DeleteFunc: func(e event.DeleteEvent) bool {
-			return true
-		},
-
-		// Allow generic events (e.g., external triggers)
-		GenericFunc: func(e event.GenericEvent) bool {
-			return true
-		},
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.Paas{}).
+		For(&v1alpha1.Paas{}, builder.WithPredicates(
+			predicate.Or(
+				// Spec updated
+				predicate.GenerationChangedPredicate{},
+				// Labels updated
+				predicate.LabelChangedPredicate{},
+			))).
 		Watches(
 			&v1alpha1.PaasConfig{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -295,15 +273,8 @@ func (r *PaasReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 				return reqs
 			}),
-			builder.WithPredicates(activePaasConfigUpdated),
+			builder.WithPredicates(v1alpha1.ActivePaasConfigUpdated()),
 		).
-		WithEventFilter(
-			predicate.Or(
-				// Spec updated
-				predicate.GenerationChangedPredicate{},
-				// Labels updated
-				predicate.LabelChangedPredicate{},
-			)).
 		Complete(r)
 }
 
