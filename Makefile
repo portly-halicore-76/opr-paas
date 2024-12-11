@@ -29,7 +29,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # belastingdienst/opr-paas:$VERSION and my.domain/opr-paas-catalog:$VERSION.
-IMAGE_TAG_BASE ?= belastingdienst/opr-paas:0.1.0
+IMAGE_TAG_BASE ?= ghcr.io/belastingdienst/opr-paas
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -96,7 +96,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=paas-manager-role crd paths="./..." output:crd:artifacts:config=manifests/crds output:crd:artifacts:config=manifests/crds output:rbac:artifacts:config=manifests/rbac
+	$(CONTROLLER_GEN) rbac:roleName=paas-manager-role crd paths="./..." output:crd:artifacts:config=config/crds output:crd:artifacts:config=config/crds output:rbac:artifacts:config=config/rbac
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -138,7 +138,7 @@ setup-e2e: kustomize ## Setup test environment in the K8s cluster specified in ~
 	# Apply context needed by operator
 	$(KUSTOMIZE) build test/e2e/manifests/paas-context | kubectl apply -f -
 	# Apply opr-paas crds
-	$(KUSTOMIZE) build manifests/crds | kubectl apply -f -
+	$(KUSTOMIZE) build config/crds | kubectl apply -f -
 	# create folder to hold go coverage result
 	mkdir -p /tmp/coverage/paas
 
@@ -204,20 +204,20 @@ endif
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build manifests/crds | $(KUBECTL) apply -f -
+	$(KUSTOMIZE) build config/crds | $(KUBECTL) apply -f -
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build manifests/crds | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/crds | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd manifests/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build manifests/default | $(KUBECTL) apply -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
 .PHONY: undeploy
 undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build manifests/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Dependencies
 

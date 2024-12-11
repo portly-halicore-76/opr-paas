@@ -29,7 +29,7 @@ fi
 $KUSTOMIZE version
 which "$KUSTOMIZE"
 
-cd "${SRCROOT}"/manifests/default && $KUSTOMIZE edit set image controller="${IMAGE_NAMESPACE}/opr-paas:${IMAGE_TAG}"
+cd "${SRCROOT}"/config/default && $KUSTOMIZE edit set image controller="${IMAGE_NAMESPACE}/opr-paas:${IMAGE_TAG}"
 
-echo "${AUTOGENMSG}" >"${SRCROOT}/manifests/install.yaml"
-$KUSTOMIZE build "${SRCROOT}/manifests/default" >>"${SRCROOT}/manifests/install.yaml"
+echo "${AUTOGENMSG}" >"${SRCROOT}/config/install.yaml"
+$KUSTOMIZE build "${SRCROOT}/config/default" >>"${SRCROOT}/config/install.yaml"
