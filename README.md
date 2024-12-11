@@ -22,7 +22,7 @@ Deploy the operator using the following commands:
 
 ```
 kubectl apply -f https://github.com/belastingdienst/opr-paas/releases/latest/download/install.yaml
-kubectl apply -f https://raw.githubusercontent.com/belastingdienst/opr-paas/refs/heads/main/examples/resources/_v1alpha1_paasconfig.yaml
+kubectl apply -f https://raw.githubusercontent.com/belastingdienst/opr-paas/refs/heads/main/config/samples/_v1alpha1_paasconfig.yaml
 ```
 
 The second command will load an example PaasConfig resource from the main branch
@@ -32,11 +32,10 @@ version instead.
 This will install the latest release and create:
 
 - a namespace called `paas-system`;
-- 2 CRDs (`Paas` and `PaasNs`);
+- 3 CRDs (`Paas`, `PaasNs` and `PaasConfig`);
 - a service account, role, role binding, cluster role and cluster role binding for
   all permissions required by the operator;
 - a viewer & an editor cluster role for Paas and PaasNs resources;
-- a configmap with all operator configuration options;
 - a deployment running the operator;
 
 Feel free to change config as required.
