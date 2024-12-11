@@ -95,8 +95,8 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=paas-manager-role crd paths="./..." output:crd:artifacts:config=config/crds output:crd:artifacts:config=config/crds output:rbac:artifacts:config=config/rbac
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -138,7 +138,7 @@ setup-e2e: kustomize ## Setup test environment in the K8s cluster specified in ~
 	# Apply context needed by operator
 	$(KUSTOMIZE) build test/e2e/manifests/paas-context | kubectl apply -f -
 	# Apply opr-paas crds
-	$(KUSTOMIZE) build config/crds | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 	# create folder to hold go coverage result
 	mkdir -p /tmp/coverage/paas
 
@@ -204,11 +204,11 @@ endif
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crds | $(KUBECTL) apply -f -
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crds | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.

@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- _v1alpha1_paas.yaml
+- _v1alpha1_paasconfig.yaml
+- _v1alpha1_paasns.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
