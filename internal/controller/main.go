@@ -9,6 +9,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/belastingdienst/opr-paas/api/v1alpha1"
@@ -17,10 +18,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // PaasConfigStore is a thread-safe store for the current PaasConfig
@@ -34,6 +39,38 @@ var (
 	_crypt          map[string]*crypt.Crypt
 	debugComponents []string
 )
+
+func activePaasConfigUpdated() predicate.Predicate {
+	return predicate.Funcs{
+		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*v1alpha1.PaasConfig)
+			newObj := e.ObjectNew.(*v1alpha1.PaasConfig)
+
+			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
+			if meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, v1alpha1.TypeActivePaasConfig, metav1.ConditionTrue) {
+				return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
+			}
+
+			return false
+		},
+
+		// Disallow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+
+		// Disallow delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		// Disallow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+}
 
 // GetConfig retrieves the current configuration
 func GetConfig() v1alpha1.PaasConfigSpec {
