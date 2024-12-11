@@ -287,7 +287,7 @@ func (r *PaasNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				predicate.LabelChangedPredicate{},
 			))).
 		Watches(&v1alpha1.PaasConfig{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, gofer client.Object) []ctrl.Request {
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []ctrl.Request {
 				paasnses := &v1alpha1.PaasNSList{}
 				if err := mgr.GetClient().List(ctx, paasnses); err != nil {
 					mgr.GetLogger().Error(err, "while listing paasnses")
@@ -305,7 +305,6 @@ func (r *PaasNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				return reqs
 			}), builder.WithPredicates(v1alpha1.ActivePaasConfigUpdated())).
-		// TODO determine whether the following is replaced by builder.WithPredicates?
 		Complete(r)
 }
 

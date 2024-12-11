@@ -292,6 +292,9 @@ func init() {
 	SchemeBuilder.Register(&PaasConfig{}, &PaasConfigList{})
 }
 
+// ActivePaasConfigUpdated returns a predicate to be used in watches. We are only interested in changes to the active PaasConfig.
+// because we determine the active PaasConfig based on a Condition, we must use the updateFunc as the status set is done via an
+// update. We explicitly don't return deletions of the PaasConfig.
 func ActivePaasConfigUpdated() predicate.Predicate {
 	return predicate.Funcs{
 		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
@@ -299,8 +302,12 @@ func ActivePaasConfigUpdated() predicate.Predicate {
 			oldObj := e.ObjectOld.(*PaasConfig)
 			newObj := e.ObjectNew.(*PaasConfig)
 
-			// Trigger reconciliation only if the updated paasConfig has the Active status and has a spec change.
+			// The 'double' status check is needed because during 'creation' of the PaasConfig, the Condition is set. Once set
+			// we check for specChanges.
 			if meta.IsStatusConditionPresentAndEqual(newObj.Status.Conditions, TypeActivePaasConfig, metav1.ConditionTrue) {
+				if !meta.IsStatusConditionPresentAndEqual(oldObj.Status.Conditions, TypeActivePaasConfig, metav1.ConditionTrue) {
+					return true
+				}
 				return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
 			}
 
