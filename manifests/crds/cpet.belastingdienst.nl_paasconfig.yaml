@@ -186,6 +186,18 @@ spec:
                   type: string
                 minItems: 1
                 type: array
+              decryptKeySecret:
+                description: DecryptKeysSecretName is a reference to the secret containing
+                  the DecryptKeys
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
               exclude_appset_name:
                 description: |-
                   Deprecated: ArgoCD specific code will be removed from the operator
@@ -243,6 +255,7 @@ spec:
             required:
             - capabilities
             - decryptKeyPaths
+            - decryptKeySecret
             - exclude_appset_name
             - whitelist
             type: object

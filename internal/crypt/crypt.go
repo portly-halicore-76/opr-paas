@@ -54,6 +54,7 @@ func NewPrivateKeyFromFile(privateKeyPath string) (*cryptPrivateKey, error) {
 		}, nil
 	}
 }
+
 // NewPrivateKeyFromRsa returns a cryptPrivateKey from a privateKeyFilePath
 func NewPrivateKeyFromRsa(privateKey rsa.PrivateKey) (*cryptPrivateKey, error) {
 	if privateKeyBlock, _ := pem.Decode(privateKey); privateKeyBlock == nil {
@@ -141,16 +142,16 @@ func NewCryptFromFiles(privateKeyPaths []string, publicKeyPath string, encryptio
 	}, nil
 }
 
+// TODO(portly-halicore-76) Complete the following code
 // NewCryptFromKeys returns a Crypt based on the provided privateKeys and publicKey using the encryptionContext
 func NewCryptFromKeys(privateKeys []rsa.PrivateKey, publicKeyPath string, encryptionContext string) (*Crypt, error) {
 	var cryptPrivateKeys cryptPrivateKeys
 
-		for _, key := range privateKeys {
-			if pk, err := NewPrivateKeyFromFile(file); err != nil {
-				return nil, fmt.Errorf("invalid private key file %s", file)
-			} else {
-				cryptPrivateKeys = append(cryptPrivateKeys, *pk)
-			}
+	for _, key := range privateKeys {
+		if pk, err := NewPrivateKeyFromFile(file); err != nil {
+			return nil, fmt.Errorf("invalid private key file %s", file)
+		} else {
+			cryptPrivateKeys = append(cryptPrivateKeys, *pk)
 		}
 	}
 
