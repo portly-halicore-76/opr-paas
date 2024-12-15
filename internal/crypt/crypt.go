@@ -142,14 +142,14 @@ func NewCryptFromFiles(privateKeyPaths []string, publicKeyPath string, encryptio
 	}, nil
 }
 
-// TODO(portly-halicore-76) Complete the following code
+// TODO(portly-halicore-76) Complete the following code, call it from a func which will take a k8s secret
 // NewCryptFromKeys returns a Crypt based on the provided privateKeys and publicKey using the encryptionContext
 func NewCryptFromKeys(privateKeys []rsa.PrivateKey, publicKeyPath string, encryptionContext string) (*Crypt, error) {
 	var cryptPrivateKeys cryptPrivateKeys
 
 	for _, key := range privateKeys {
-		if pk, err := NewPrivateKeyFromFile(file); err != nil {
-			return nil, fmt.Errorf("invalid private key file %s", file)
+		if pk, err := NewPrivateKeyFromRsa(key); err != nil {
+			return nil, fmt.Errorf("invalid private key file %s", key)
 		} else {
 			cryptPrivateKeys = append(cryptPrivateKeys, *pk)
 		}
@@ -163,7 +163,7 @@ func NewCryptFromKeys(privateKeys []rsa.PrivateKey, publicKeyPath string, encryp
 	}
 
 	return &Crypt{
-		privateKeys:       privateKeys,
+		privateKeys:       cryptPrivateKeys,
 		publicKeyPath:     publicKeyPath,
 		encryptionContext: []byte(encryptionContext),
 	}, nil
