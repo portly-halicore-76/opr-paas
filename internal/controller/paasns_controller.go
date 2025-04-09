@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/belastingdienst/opr-paas/api/v1alpha2"
 	"reflect"
 	"strings"
 
@@ -311,7 +312,7 @@ func (pnsr *PaasNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					})
 				}
 				return reqs
-			}), builder.WithPredicates(v1alpha1.ActivePaasConfigUpdated())).
+			}), builder.WithPredicates(v1alpha2.ActivePaasConfigUpdated())).
 		Complete(pnsr)
 }
 

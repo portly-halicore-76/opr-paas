@@ -4,12 +4,18 @@ Licensed under the EUPL 1.2.
 See LICENSE.md for details.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	"fmt"
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
+
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,17 +76,6 @@ type PaasConfigSpec struct {
 	// +kubebuilder:validation:Optional
 	LDAP ConfigLdap `json:"ldap"`
 
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// Permissions to set for ArgoCD instance
-	// +kubebuilder:validation:Optional
-	ArgoPermissions ConfigArgoPermissions `json:"argopermissions"`
-
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// Option to enable or disable ArgoCD specific Code
-	// +kubebuilder:default:=true
-	// +kubebuilder:validation:Optional
-	ArgoEnabled bool `json:"argoenabled"`
-
 	// Namespace in which a clusterwide ArgoCD can be found for managing capabilities and appProjects
 	// Deprecated: ArgoCD specific code will be removed from the operator
 	// +kubebuilder:validation:MinLength=1
@@ -108,11 +103,6 @@ type PaasConfigSpec struct {
 	// +kubebuilder:default:=argocd
 	// +kubebuilder:validation:Optional
 	ManagedBySuffix string `json:"managed_by_suffix"`
-
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// Name of an ApplicationSet to be set as ignored in the ArgoCD bootstrap Application
-	// +kubebuilder:validation:Optional
-	ExcludeAppSetName string `json:"exclude_appset_name"`
 
 	// Grant permissions to all groups according to config in configmap and role selected per group in paas.
 	// +kubebuilder:validation:Optional
@@ -145,32 +135,6 @@ func (crm ConfigRoleMappings) Roles(roleMaps []string) []string {
 		}
 	}
 	return mappedRoles
-}
-
-// Deprecated: ArgoCD specific code will be removed from the operator
-type ConfigArgoPermissions struct {
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// The optional default policy which is set in the ArgoCD instance
-	// +kubebuilder:validation:Optional
-	DefaultPolicy string `json:"default_policy"`
-
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// The name of the ArgoCD instance to apply ArgoPermissions to
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Required
-	ResourceName string `json:"resource_name"`
-
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// The name of the role to add to Groups set in ArgoPermissions
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Required
-	Role string `json:"role"`
-
-	// Deprecated: ArgoCD specific code will be removed from the operator
-	// The header value to set in ArgoPermissions
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Required
-	Header string `json:"header"`
 }
 
 type ConfigLdap struct {
@@ -339,4 +303,58 @@ type PaasConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&PaasConfig{}, &PaasConfigList{})
+}
+
+// ActivePaasConfigUpdated returns a predicate to be used in watches.
+// We are only interested in changes to the active PaasConfig.
+// Because we determine the active PaasConfig based on a Condition,
+// we must use the updateFunc as the status set is done via an update.
+// We explicitly don't return deletions of the PaasConfig.
+func ActivePaasConfigUpdated() predicate.Predicate {
+	return predicate.Funcs{
+		// Trigger reconciliation only if the paasConfig has the Active PaasConfig is updated
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj, oldOk := e.ObjectOld.(*PaasConfig)
+			newObj, newOk := e.ObjectNew.(*PaasConfig)
+
+			// If type assertion fails, return false (do not trigger reconciliation)
+			if !oldOk || !newOk {
+				return false
+			}
+
+			// The 'double' status check is needed because during 'creation' of the PaasConfig, the Condition is set.
+			// Once set we check for specChanges.
+			if meta.IsStatusConditionPresentAndEqual(
+				newObj.Status.Conditions,
+				TypeActivePaasConfig,
+				metav1.ConditionTrue,
+			) {
+				if !meta.IsStatusConditionPresentAndEqual(
+					oldObj.Status.Conditions,
+					TypeActivePaasConfig,
+					metav1.ConditionTrue,
+				) {
+					return true
+				}
+				return !reflect.DeepEqual(oldObj.Spec, newObj.Spec)
+			}
+
+			return false
+		},
+
+		// Disallow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+
+		// Disallow delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		// Disallow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
 }
