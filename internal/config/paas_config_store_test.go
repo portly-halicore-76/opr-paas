@@ -56,7 +56,7 @@ func TestResetConfig(t *testing.T) {
 	actual = GetConfig()
 	assert.Equal(t, v1alpha2.PaasConfig{}, actual)
 
-	// Assert error when no config is set via GetConfigWithError
-	_, err := GetConfigWithError()
+	// Assert error when no config is set via GetConfigOrError
+	_, err := GetConfigOrError()
 	assert.Error(t, err, "uninitialized paasconfig")
 }

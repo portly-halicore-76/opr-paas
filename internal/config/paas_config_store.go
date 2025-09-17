@@ -36,8 +36,9 @@ func GetConfig() v1alpha2.PaasConfig {
 	return *cnf.store
 }
 
-// GetConfigWithError retrieves the current configuration with the latest api version
-func GetConfigWithError() (*v1alpha2.PaasConfig, error) {
+// GetConfigOrError retrieves the current configuration with the latest api version or
+// returns an error if the config is nil
+func GetConfigOrError() (*v1alpha2.PaasConfig, error) {
 	cnf.mutex.RLock()
 	defer cnf.mutex.RUnlock()
 

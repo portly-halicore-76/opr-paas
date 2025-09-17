@@ -97,7 +97,7 @@ func capElementsFromPaas(
 ) (elements fields.Elements, err error) {
 	_, componentLogger := logging.GetLogComponent(ctx, logging.PluginGeneratorComponent)
 	logger := componentLogger.With().Str("paas", paas.Name).Str("capability", capName).Logger()
-	myConfig, err := config.GetConfigWithError()
+	myConfig, err := config.GetConfigOrError()
 	if err != nil {
 		logger.Error().AnErr("error", err).Msg("get paasConfig failed")
 		return nil, err

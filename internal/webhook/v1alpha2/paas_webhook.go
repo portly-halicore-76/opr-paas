@@ -110,7 +110,7 @@ func (v *PaasCustomValidator) validate(ctx context.Context, paas *v1alpha2.Paas)
 	var allErrs field.ErrorList
 	var warnings []string
 	ctx, logger := logging.GetLogComponent(ctx, logging.WebhookPaasComponentV2)
-	conf, err := config.GetConfigWithError()
+	conf, err := config.GetConfigOrError()
 	if err != nil {
 		return nil, err
 	}

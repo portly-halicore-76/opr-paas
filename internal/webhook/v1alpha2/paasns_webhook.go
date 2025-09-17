@@ -84,7 +84,7 @@ func (v *PaasNSCustomValidator) ValidateCreate(
 		return w, errs.ToAggregate()
 	}
 
-	myConfig, err := config.GetConfigWithError()
+	myConfig, err := config.GetConfigOrError()
 	if err != nil {
 		errs = append(errs, field.InternalError(
 			field.NewPath("paasconfig"),
